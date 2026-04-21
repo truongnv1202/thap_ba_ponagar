@@ -1,0 +1,14 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY web/package*.json ./web/
+WORKDIR /app/web
+RUN npm ci
+
+COPY web ./
+ARG VITE_API_BASE=
+ENV VITE_API_BASE=${VITE_API_BASE}
+RUN npm run build
+
+FROM nginx:1.27-alpine AS runner
+COPY --from=builder /app/web/dist /usr/share/nginx/html

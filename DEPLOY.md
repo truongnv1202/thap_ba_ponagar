@@ -70,3 +70,44 @@ Neu dung SSL:
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d thapba.lumina-x.vn
 ```
+
+## 4) Deploy bang Docker (khuyen nghi)
+
+### Yeu cau
+
+- Server da cai Docker + Docker Compose plugin.
+- Domain `thapba.lumina-x.vn` da tro A record ve server.
+
+### Chay tren server
+
+```bash
+cd /var/www
+git clone https://github.com/truongnv1202/thap_ba_ponagar.git gamethapba || true
+cd /var/www/gamethapba
+git pull origin main
+```
+
+Dat JWT secret that (bat buoc):
+
+```bash
+sed -i 's/JWT_SECRET: replace-with-a-strong-secret/JWT_SECRET: YOUR_STRONG_SECRET_HERE/g' docker-compose.yml
+```
+
+Build va chay:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f nginx
+```
+
+Stack Docker se chay:
+- Postgres noi bo (`db`)
+- Prisma migration 1 lan (`migrate`)
+- 3 API service: `api-2996`, `api-2997`, `api-2998`
+- Frontend static (`web`)
+- Nginx public cong `80` (`nginx`)
+
+### SSL voi Cloudflare
+
+Neu dung Cloudflare proxy, uu tien SSL mode `Full (strict)`.
