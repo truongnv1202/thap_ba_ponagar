@@ -41,6 +41,8 @@ services:
       PORT: 2996
       DATABASE_URL: postgresql://postgres:postgres@db:5432/ponagar_game?schema=public
       JWT_SECRET: replace-with-a-strong-secret
+    ports:
+      - "127.0.0.1:2996:2996"
     restart: unless-stopped
 
   api-2997:
@@ -57,6 +59,8 @@ services:
       PORT: 2997
       DATABASE_URL: postgresql://postgres:postgres@db:5432/ponagar_game?schema=public
       JWT_SECRET: replace-with-a-strong-secret
+    ports:
+      - "127.0.0.1:2997:2997"
     restart: unless-stopped
 
   api-2998:
@@ -73,6 +77,8 @@ services:
       PORT: 2998
       DATABASE_URL: postgresql://postgres:postgres@db:5432/ponagar_game?schema=public
       JWT_SECRET: replace-with-a-strong-secret
+    ports:
+      - "127.0.0.1:2998:2998"
     restart: unless-stopped
 
   web:
@@ -85,20 +91,8 @@ services:
       - api-2996
       - api-2997
       - api-2998
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: thapba-nginx
-    depends_on:
-      - web
-      - api-2996
-      - api-2997
-      - api-2998
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx/docker.thapba.lumina-x.vn.conf:/etc/nginx/conf.d/default.conf:ro
+      - "127.0.0.1:8080:80"
     restart: unless-stopped
 
 volumes:
