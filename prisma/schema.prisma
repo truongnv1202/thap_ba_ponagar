@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum RunStatus {
+  IN_PROGRESS
+  QUIZ_DONE
+  WON
+  LOST
+}
+
+model User {
+  id           String             @id @default(uuid())
+  email        String             @unique
+  passwordHash String
+  displayName  String
+  role         UserRole           @default(STUDENT)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  runs         GameRun[]
+  attempts     GameRunQuestion[]
+  pieces       RunPieceInventory[]
+  placements   RunPiecePlacement[]
+  results      GameResult[]
+  campaignProgress CampaignProgress?
+}
+
+model GameConfig {
+  id                     String    @id @default(uuid())
+  code                   String    @unique
+  questionsPerRun        Int       @default(10)
+  minCorrectUnlockPuzzle Int       @default(6)
+  timeLimitSec           Int       @default(300)
+  active                 Boolean   @default(true)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  runs                   GameRun[]
+}
+
+model QuestionBank {
+  id        String           @id @default(uuid())
+  content   String
+  topic     String?
+  difficulty Int             @default(1)
+  locale    String           @default("vi")
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  choices   QuestionChoice[]
+  runLinks  GameRunQuestion[]
+
+  @@index([locale, isActive])
+}
+
+model QuestionChoice {
+  id         String       @id @default(uuid())
+  questionId String
+  orderIndex Int          @default(0)
+  content    String
+  isCorrect  Boolean      @default(false)
+  question   QuestionBank @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, orderIndex])
+}
+
+model PuzzleTemplate {
+  id          String        @id @default(uuid())
+  code        String        @unique
+  name        String
+  totalPieces Int
+  imageUrl    String?
+  isActive    Boolean       @default(true)
+  pieces      PuzzlePiece[]
+  runs        GameRun[]
+  levelNumber Int?
+}
+
+model PuzzlePiece {
+  id            String             @id @default(uuid())
+  templateId    String
+  pieceCode     String
+  correctSlot   Int
+  template      PuzzleTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  inventories   RunPieceInventory[]
+  placements    RunPiecePlacement[]
+
+  @@unique([templateId, pieceCode])
+}
+
+model GameRun {
+  id             String             @id @default(uuid())
+  accessToken    String             @unique
+  userId         String
+  configId       String
+  puzzleTemplateId String
+  status         RunStatus          @default(IN_PROGRESS)
+  startedAt      DateTime           @default(now())
+  finishedAt     DateTime?
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config         GameConfig         @relation(fields: [configId], references: [id])
+  puzzleTemplate PuzzleTemplate     @relation(fields: [puzzleTemplateId], references: [id])
+  questions      GameRunQuestion[]
+  pieceInventory RunPieceInventory[]
+  placements     RunPiecePlacement[]
+  result         GameResult?
+
+  @@index([userId, startedAt])
+}
+
+model GameRunQuestion {
+  id               String       @id @default(uuid())
+  runId            String
+  userId           String
+  questionId       String
+  orderNo          Int
+  selectedChoiceId String?
+  isCorrect        Boolean?
+  answeredAt       DateTime?
+  run              GameRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question         QuestionBank @relation(fields: [questionId], references: [id])
+
+  @@unique([runId, questionId])
+  @@unique([runId, orderNo])
+}
+
+model RunPieceInventory {
+  id                   String      @id @default(uuid())
+  runId                String
+  userId               String
+  pieceId              String
+  earnedFromRunQuestionId String?
+  earnedAt             DateTime    @default(now())
+  displayOrder         Int         @default(0)
+  shapeJson            Json?
+  run                  GameRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  piece                PuzzlePiece @relation(fields: [pieceId], references: [id])
+
+  @@unique([runId, pieceId])
+  @@index([runId, displayOrder])
+}
+
+model RunPiecePlacement {
+  id             String      @id @default(uuid())
+  runId          String
+  userId         String
+  pieceId        String
+  slotPosition   Int
+  isCorrectPos   Boolean
+  placedAt       DateTime    @default(now())
+  run            GameRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  piece          PuzzlePiece @relation(fields: [pieceId], references: [id])
+
+  @@unique([runId, pieceId])
+}
+
+model GameResult {
+  id                String   @id @default(uuid())
+  runId             String   @unique
+  userId            String
+  playerName        String?
+  playerAge         Int?
+  correctCount      Int
+  wrongCount        Int
+  scoreTotal        Int
+  completionTimeSec Int
+  won               Boolean
+  createdAt         DateTime @default(now())
+  run               GameRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CampaignProgress {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  displayName  String?
+  totalTimeSec Int      @default(0)
+  highestLevel Int      @default(0)
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([highestLevel, totalTimeSec])
+}
+
+model HomeSlide {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  imageUrl    String
+  i18n        Json?
+  orderIndex  Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active, orderIndex])
+}
